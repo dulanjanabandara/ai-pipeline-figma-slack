@@ -3,6 +3,35 @@ import { parseFigmaUrl, type FigmaDesignContext } from '@ai-pipeline/shared';
 import { z } from 'zod';
 import { isDryRun, optionalEnv } from '../lib/env.js';
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Figma's REST API rate-limits per token (shared with the figma-developer-mcp
+ * server if that's also running). A 429 is almost always transient, so retry
+ * with backoff instead of failing the whole pipeline run immediately.
+ */
+async function fetchFigmaWithRetry(
+  url: string,
+  token: string,
+  maxAttempts = 4,
+): Promise<Response> {
+  let lastRes: Response | undefined;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(url, { headers: { 'X-Figma-Token': token } });
+    if (res.status !== 429) return res;
+    lastRes = res;
+    if (attempt === maxAttempts) break;
+    const retryAfterHeader = Number(res.headers.get('Retry-After'));
+    const delayMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+      ? retryAfterHeader * 1000
+      : 2 ** attempt * 1000; // 2s, 4s, 8s...
+    await sleep(delayMs);
+  }
+  return lastRes!;
+}
+
 export const fetchFigmaDesignTool = createTool({
   id: 'fetch-figma-design',
   description:
@@ -46,9 +75,10 @@ export const fetchFigmaDesignTool = createTool({
       throw new Error('FIGMA_ACCESS_TOKEN is required when dryRun is false');
     }
 
-    const fileRes = await fetch(`https://api.figma.com/v1/files/${fileKey}`, {
-      headers: { 'X-Figma-Token': token },
-    });
+    const fileRes = await fetchFigmaWithRetry(
+      `https://api.figma.com/v1/files/${fileKey}`,
+      token,
+    );
 
     if (!fileRes.ok) {
       throw new Error(`Figma API error ${fileRes.status}: ${await fileRes.text()}`);
@@ -67,9 +97,9 @@ export const fetchFigmaDesignTool = createTool({
 
     let screenshotUrl: string | undefined;
     if (nodeId) {
-      const imgRes = await fetch(
+      const imgRes = await fetchFigmaWithRetry(
         `https://api.figma.com/v1/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png`,
-        { headers: { 'X-Figma-Token': token } },
+        token,
       );
       if (imgRes.ok) {
         const imgJson = (await imgRes.json()) as { images?: Record<string, string> };

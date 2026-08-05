@@ -1,0 +1,43 @@
+{
+  "name": "orchestrator",
+  "version": "1.0.0",
+  "description": "Mastra multi-agent orchestrator for Figma → GitHub → Linear → Railway → Slack",
+  "main": "index.js",
+  "scripts": {
+    "dev": "mastra dev",
+    "build": "mastra build",
+    "start": "mastra start",
+    "pipeline:dry-run": "tsx src/scripts/run-pipeline.ts",
+    "slack:bot": "tsx src/slack/bot.ts"
+  },
+  "keywords": [
+    "mastra",
+    "agents",
+    "mcp",
+    "pipeline"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@ai-pipeline/shared": "*",
+    "@chat-adapter/slack": "^4.34.0",
+    "@mastra/core": "^1.51.0",
+    "@mastra/libsql": "^1.16.0",
+    "@mastra/mcp": "^1.14.0",
+    "@mastra/memory": "^1.23.0",
+    "@mastra/slack": "^1.5.0",
+    "@slack/bolt": "^5.0.0",
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "mastra": "^1.19.0",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3"
+  }
+}

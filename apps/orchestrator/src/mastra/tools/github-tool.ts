@@ -85,18 +85,36 @@ export const createGithubPrTool = createTool({
     let latestSha = baseSha;
     for (const file of input.files) {
       const contentBase64 = Buffer.from(file.content, 'utf8').toString('base64');
-      const putRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`,
-        {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify({
-            message: `feat: add ${file.path} via AI pipeline`,
-            content: contentBase64,
-            branch: input.branch,
-          }),
-        },
+      const contentsUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`;
+
+      // The Contents API requires the current blob's `sha` when overwriting a
+      // file that already exists on the target branch (it 422s with "sha
+      // wasn't supplied" otherwise) — check first since the new branch starts
+      // out identical to base and often already contains these paths.
+      let existingSha: string | undefined;
+      const existingRes = await fetch(
+        `${contentsUrl}?ref=${encodeURIComponent(input.branch)}`,
+        { headers },
       );
+      if (existingRes.ok) {
+        const existingJson = (await existingRes.json()) as { sha?: string };
+        existingSha = existingJson.sha;
+      } else if (existingRes.status !== 404) {
+        throw new Error(
+          `Failed to check existing file ${file.path}: ${await existingRes.text()}`,
+        );
+      }
+
+      const putRes = await fetch(contentsUrl, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          message: `feat: add ${file.path} via AI pipeline`,
+          content: contentBase64,
+          branch: input.branch,
+          ...(existingSha ? { sha: existingSha } : {}),
+        }),
+      });
       if (!putRes.ok) {
         throw new Error(`Failed to write ${file.path}: ${await putRes.text()}`);
       }

@@ -13,7 +13,11 @@ type StdioServer = {
 export function createPipelineMcpClient(): MCPClient | null {
   const servers: Record<string, StdioServer> = {};
 
-  if (process.env.FIGMA_ACCESS_TOKEN) {
+  // The figma-developer-mcp server does its own API handshake on every process
+  // start, which competes for the same account-level Figma rate limit as the
+  // REST tool. Allow disabling it independently (e.g. while a rate-limit
+  // cooldown is in effect) without losing FIGMA_ACCESS_TOKEN for REST calls.
+  if (process.env.FIGMA_ACCESS_TOKEN && process.env.DISABLE_FIGMA_MCP !== 'true') {
     servers.figma = {
       command: 'npx',
       args: ['-y', 'figma-developer-mcp', `--figma-api-key=${process.env.FIGMA_ACCESS_TOKEN}`],

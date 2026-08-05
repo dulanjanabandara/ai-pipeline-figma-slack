@@ -9,25 +9,41 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Figma's REST API rate-limits per token (shared with the figma-developer-mcp
- * server if that's also running). A 429 is almost always transient, so retry
- * with backoff instead of failing the whole pipeline run immediately.
+ * server if that's also running). A short 429 is usually transient, so retry
+ * with backoff — but Figma can also return a `Retry-After` measured in HOURS
+ * or DAYS once a token is badly throttled, and blindly sleeping for that long
+ * would hang the whole pipeline. Cap the wait; if Figma demands longer than
+ * that, fail fast with a clear message instead of hanging.
  */
+const MAX_RETRY_WAIT_MS = 15_000;
+
 async function fetchFigmaWithRetry(
   url: string,
   token: string,
-  maxAttempts = 4,
+  maxAttempts = 3,
 ): Promise<Response> {
   let lastRes: Response | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const res = await fetch(url, { headers: { 'X-Figma-Token': token } });
     if (res.status !== 429) return res;
     lastRes = res;
-    if (attempt === maxAttempts) break;
+
     const retryAfterHeader = Number(res.headers.get('Retry-After'));
-    const delayMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
-      ? retryAfterHeader * 1000
-      : 2 ** attempt * 1000; // 2s, 4s, 8s...
-    await sleep(delayMs);
+    const requestedDelayMs =
+      Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+        ? retryAfterHeader * 1000
+        : 2 ** attempt * 1000; // 2s, 4s, 8s...
+
+    if (requestedDelayMs > MAX_RETRY_WAIT_MS) {
+      const retryAfterMinutes = Math.ceil(requestedDelayMs / 60_000);
+      throw new Error(
+        `Figma API rate limit exceeded (429) and Retry-After is ${retryAfterMinutes} minute(s) — ` +
+          `too long to wait inline. The FIGMA_ACCESS_TOKEN is likely heavily throttled right now; ` +
+          `wait for the window to reset or use a different token.`,
+      );
+    }
+    if (attempt === maxAttempts) break;
+    await sleep(requestedDelayMs);
   }
   return lastRes!;
 }

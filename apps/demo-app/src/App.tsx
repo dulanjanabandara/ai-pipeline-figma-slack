@@ -1,22 +1,46 @@
-export default function App() {
+import React from 'react';
+import { Navbar } from './components/Navbar';
+import { Hero } from './components/Hero';
+import { PipelineCanvas } from './components/PipelineCanvas';
+import { Observability } from './components/Observability';
+import { CostEstimator } from './components/CostEstimator';
+import { Integrations } from './components/Integrations';
+import { Footer } from './components/Footer';
+
+export function App() {
+  const scrollToStudio = () => {
+    const el = document.getElementById('canvas');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <main className="page">
-      <section className="hero">
-        <p className="brand">Signalline</p>
-        <h1>Design becomes deployable React in one agent workflow.</h1>
-        <p className="lede">
-          Figma context in. Pull request, Linear issue, and Railway URL out — with Slack as the
-          control plane.
-        </p>
-        <div className="actions">
-          <a className="primary" href="#ship">
-            Ship this screen
-          </a>
-          <a className="secondary" href="#docs">
-            Read the pipeline
-          </a>
-        </div>
-      </section>
-    </main>
+    <div className="min-h-screen bg-[#07090E] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-black">
+      {/* Top Header Navigation */}
+      <Navbar onOpenStudio={scrollToStudio} />
+
+      <main className="flex-grow">
+        {/* Hero Section with Brand Focus and Core CTAs */}
+        <Hero onExploreClick={scrollToStudio} />
+
+        {/* Visual Pipeline DAG Canvas & Interactive Inspector */}
+        <PipelineCanvas />
+
+        {/* Real-Time Observability & Waterfall Traces */}
+        <Observability />
+
+        {/* Cost & Latency ROI Estimator Tool */}
+        <CostEstimator />
+
+        {/* Enterprise Integrations Grid */}
+        <Integrations />
+      </main>
+
+      {/* Footer */}
+      <Footer />
+    </div>
   );
 }
+
+export default App;

@@ -8,11 +8,14 @@ export async function postPipelineProgress(options: {
 }): Promise<void> {
   const dryRun = isDryRun(options.dryRun);
   try {
-    await notifySlackTool.execute!({
-      channel: options.channel,
-      text: options.text,
-      dryRun,
-    });
+    await notifySlackTool.execute!(
+      {
+        channel: options.channel,
+        text: options.text,
+        dryRun,
+      },
+      {} as never,
+    );
   } catch (error) {
     // Progress posts should not fail the pipeline.
     console.warn('[slack] progress post failed:', error);

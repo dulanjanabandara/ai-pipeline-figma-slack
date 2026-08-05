@@ -216,7 +216,11 @@ app.event('app_mention', async ({ event, client, say }) => {
 
 const port = Number(process.env.SLACK_BOLT_PORT ?? 3001);
 
-await app.start(useSocketMode ? undefined : port);
+if (useSocketMode) {
+  await app.start();
+} else {
+  await app.start(port);
+}
 console.log(
   useSocketMode
     ? '⚡️ Slack bot running (Socket Mode) — /ship-design ready'

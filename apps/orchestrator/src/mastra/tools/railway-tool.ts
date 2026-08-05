@@ -1,11 +1,12 @@
-import { createTool } from '@mastra/core/tools';
-import type { RailwayDeployResult } from '@ai-pipeline/shared';
-import { z } from 'zod';
-import { isDryRun, optionalEnv } from '../lib/env.js';
+import { createTool } from "@mastra/core/tools";
+import type { RailwayDeployResult } from "@ai-pipeline/shared";
+import { z } from "zod";
+import { isDryRun, optionalEnv } from "../lib/env.js";
 
 export const deployRailwayTool = createTool({
-  id: 'deploy-railway',
-  description: 'Trigger a Railway deployment for the demo app and return the public URL.',
+  id: "deploy-railway",
+  description:
+    "Trigger a Railway deployment for the demo app and return the public URL.",
   inputSchema: z.object({
     serviceId: z.string().optional(),
     environmentId: z.string().optional(),
@@ -24,36 +25,40 @@ export const deployRailwayTool = createTool({
       const id = `dryrun-deploy-${Date.now()}`;
       return {
         deploymentId: id,
-        status: 'SUCCESS',
+        status: "SUCCESS",
         url: `https://demo-app-dryrun.up.railway.app`,
         dryRun: true,
       };
     }
 
-    const token = optionalEnv('RAILWAY_TOKEN');
-    const serviceId = input.serviceId || optionalEnv('RAILWAY_SERVICE_ID');
-    const environmentId = input.environmentId || optionalEnv('RAILWAY_ENVIRONMENT_ID');
-    const publicUrl = optionalEnv('RAILWAY_PUBLIC_URL', 'https://demo-app.up.railway.app');
+    const token = optionalEnv("RAILWAY_TOKEN");
+    const serviceId = input.serviceId || optionalEnv("RAILWAY_SERVICE_ID");
+    const environmentId =
+      input.environmentId || optionalEnv("RAILWAY_ENVIRONMENT_ID");
+    const publicUrl = optionalEnv(
+      "RAILWAY_PUBLIC_URL",
+      "https://demo-app.up.railway.app",
+    );
 
     if (!token || !serviceId || !environmentId) {
       throw new Error(
-        'RAILWAY_TOKEN, RAILWAY_SERVICE_ID, and RAILWAY_ENVIRONMENT_ID are required when dryRun is false',
+        "RAILWAY_TOKEN, RAILWAY_SERVICE_ID, and RAILWAY_ENVIRONMENT_ID are required when dryRun is false",
       );
     }
 
     const mutation = `
-      mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
-        serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
+      mutation serviceInstanceDeployV2($serviceId: String!, $environmentId: String!) {
+        serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId)
       }
     `;
 
-    const res = await fetch('https://backboard.railway.app/graphql/v2', {
-      method: 'POST',
+    const res = await fetch("https://backboard.railway.app/graphql/v2", {
+      method: "POST",
       headers: {
         // Project tokens (created under Project Settings → Tokens, scoped to one
         // environment) authenticate via this header instead of `Authorization: Bearer`.
-        'Project-Access-Token': token,
-        'Content-Type': 'application/json',
+        "Project-Access-Token": token,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         query: mutation,
@@ -66,18 +71,20 @@ export const deployRailwayTool = createTool({
     }
 
     const json = (await res.json()) as {
-      data?: { serviceInstanceDeploy?: string };
+      data?: { serviceInstanceDeployV2?: string };
       errors?: unknown;
     };
 
-    const deploymentId = json.data?.serviceInstanceDeploy;
-    if (!deploymentId) {
-      throw new Error(`Railway deploy failed: ${JSON.stringify(json.errors ?? json)}`);
+    const deploymentId = json.data?.serviceInstanceDeployV2;
+    if (!deploymentId || typeof deploymentId !== "string") {
+      throw new Error(
+        `Railway deploy failed: ${JSON.stringify(json.errors ?? json)}`,
+      );
     }
 
     return {
       deploymentId,
-      status: 'TRIGGERED',
+      status: "TRIGGERED",
       url: publicUrl,
       dryRun: false,
     };

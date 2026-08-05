@@ -1,4 +1,5 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { isValidationError, type ValidationError } from '@mastra/core/tools';
 import { z } from 'zod';
 import { figmaCodegenAgent } from '../agents/figma-codegen-agent.js';
 import { fetchFigmaDesignTool } from '../tools/figma-tool.js';
@@ -62,6 +63,26 @@ const slackSchema = z.object({
   messageTs: z.string(),
   dryRun: z.boolean(),
 });
+
+/**
+ * Mastra's Tool.execute wrapper never throws on validation failure — it resolves
+ * to a ValidationError object (or `undefined`) instead, so calling code must check
+ * for that explicitly. This wraps a raw `tool.execute!(input, {} as never)` call and
+ * turns a bad result into a thrown Error so failures surface where they actually happen.
+ */
+async function runTool<TOut>(
+  toolId: string,
+  invoke: () => Promise<TOut | ValidationError | void>,
+): Promise<TOut> {
+  const result = await invoke();
+  if (result === undefined) {
+    throw new Error(`Tool "${toolId}" returned no output.`);
+  }
+  if (isValidationError(result)) {
+    throw new Error(`Tool "${toolId}" failed: ${result.message}`);
+  }
+  return result;
+}
 
 function slugify(value: string): string {
   return value
@@ -155,10 +176,15 @@ const fetchDesignStep = createStep({
       text: `:art: *Figma* — fetching design context…\n${inputData.figmaUrl}`,
     });
 
-    const figma = await fetchFigmaDesignTool.execute!({
-      figmaUrl: inputData.figmaUrl,
-      dryRun,
-    });
+    const figma = await runTool('fetch-figma-design', () =>
+      fetchFigmaDesignTool.execute!(
+        {
+          figmaUrl: inputData.figmaUrl,
+          dryRun,
+        },
+        {} as never,
+      ),
+    );
 
     await postPipelineProgress({
       channel: inputData.slackChannel,
@@ -262,21 +288,26 @@ const githubStep = createStep({
 
     const branch = `agent/figma-${slugify(inputData.figma.fileKey)}-${Date.now().toString(36)}`;
 
-    const github = await createGithubPrTool.execute!({
-      repo: inputData.repo,
-      baseBranch: inputData.baseBranch ?? 'main',
-      branch,
-      title: `feat(ui): generate ${inputData.figma.name} from Figma`,
-      body: [
-        `Automated PR from the Mastra design-to-deploy pipeline.`,
-        ``,
-        `**Figma:** ${inputData.figmaUrl}`,
-        `**Design:** ${inputData.figma.name}`,
-        `**Summary:** ${inputData.figma.summary}`,
-      ].join('\n'),
-      files: inputData.files,
-      dryRun,
-    });
+    const github = await runTool('create-github-pr', () =>
+      createGithubPrTool.execute!(
+        {
+          repo: inputData.repo,
+          baseBranch: inputData.baseBranch ?? 'main',
+          branch,
+          title: `feat(ui): generate ${inputData.figma.name} from Figma`,
+          body: [
+            `Automated PR from the Mastra design-to-deploy pipeline.`,
+            ``,
+            `**Figma:** ${inputData.figmaUrl}`,
+            `**Design:** ${inputData.figma.name}`,
+            `**Summary:** ${inputData.figma.summary}`,
+          ].join('\n'),
+          files: inputData.files,
+          dryRun,
+        },
+        {} as never,
+      ),
+    );
 
     await postPipelineProgress({
       channel: inputData.slackChannel,
@@ -301,12 +332,17 @@ const linearStep = createStep({
       text: ':clipboard: *Linear* — creating issue…',
     });
 
-    const linear = await createLinearIssueTool.execute!({
-      title: `Implement UI: ${inputData.figma.name}`,
-      description: `Generated from Figma (${inputData.figma.fileKey}). Branch \`${inputData.github.branch}\`.`,
-      prUrl: inputData.github.prUrl,
-      dryRun,
-    });
+    const linear = await runTool('create-linear-issue', () =>
+      createLinearIssueTool.execute!(
+        {
+          title: `Implement UI: ${inputData.figma.name}`,
+          description: `Generated from Figma (${inputData.figma.fileKey}). Branch \`${inputData.github.branch}\`.`,
+          prUrl: inputData.github.prUrl,
+          dryRun,
+        },
+        {} as never,
+      ),
+    );
 
     await postPipelineProgress({
       channel: inputData.slackChannel,
@@ -399,7 +435,18 @@ const deployStep = createStep({
       text: ':railway_track: *Railway* — triggering deploy…',
     });
 
-    const railway = await deployRailwayTool.execute!({ dryRun });
+    let railway;
+    try {
+      railway = await runTool('deploy-railway', () => deployRailwayTool.execute!({ dryRun }, {} as never));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await postPipelineProgress({
+        channel: inputData.slackChannel,
+        dryRun,
+        text: `:x: *Railway* — deploy trigger failed: \`${message}\``,
+      });
+      throw error;
+    }
 
     await postPipelineProgress({
       channel: inputData.slackChannel,
@@ -437,11 +484,16 @@ const notifyStep = createStep({
       `• Files: ${inputData.files.map((f) => f.path).join(', ')}`,
     ].join('\n');
 
-    const slack = await notifySlackTool.execute!({
-      channel: inputData.slackChannel,
-      text,
-      dryRun,
-    });
+    const slack = await runTool('notify-slack', () =>
+      notifySlackTool.execute!(
+        {
+          channel: inputData.slackChannel,
+          text,
+          dryRun,
+        },
+        {} as never,
+      ),
+    );
 
     return {
       status: 'completed' as const,

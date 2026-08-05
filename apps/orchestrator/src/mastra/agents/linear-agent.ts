@@ -12,6 +12,6 @@ Responsibilities:
 - Use clear titles like "Implement UI: <design name>"
 - Prefer the create-linear-issue tool
 - Report identifier and URL back to the operator`,
-  model: 'google/gemini-2.5-flash',
+  model: 'google/gemini-flash-latest',
   tools: { createLinearIssueTool },
 });

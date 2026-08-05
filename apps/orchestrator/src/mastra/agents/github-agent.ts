@@ -12,6 +12,6 @@ Responsibilities:
 - Open pull requests with clear titles and Figma context in the body
 - Prefer the create-github-pr tool for atomic branch+commit+PR flows
 - Confirm dry-run vs live mode before mutating a repository`,
-  model: 'google/gemini-2.5-flash',
+  model: 'google/gemini-flash-latest',
   tools: { createGithubPrTool },
 });

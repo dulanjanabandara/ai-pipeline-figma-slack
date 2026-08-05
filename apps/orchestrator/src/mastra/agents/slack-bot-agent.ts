@@ -26,7 +26,7 @@ Command format users should use:
 /ship-design <figma-url> [owner/repo] [--live]
 
 You are notifications + control — keep replies short and actionable.`,
-  model: 'google/gemini-2.5-flash',
+  model: 'google/gemini-flash-latest',
   tools: {
     notifySlackTool,
     fetchFigmaDesignTool,

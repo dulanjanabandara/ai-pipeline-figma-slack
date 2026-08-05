@@ -11,6 +11,6 @@ Responsibilities:
 - Report deployment id, status, and public URL
 - Prefer the deploy-railway tool
 - Never deploy without confirmation when the operator asks for approval first`,
-  model: 'google/gemini-2.5-flash',
+  model: 'google/gemini-flash-latest',
   tools: { deployRailwayTool },
 });

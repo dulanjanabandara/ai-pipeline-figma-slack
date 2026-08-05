@@ -21,7 +21,7 @@ When asked to ship a Figma design:
 4. Always summarize PR URL, Linear issue, Railway URL, and Slack notification status.
 5. Prefer dry-run mode unless the user explicitly asks for live integrations.
 6. When MCP tools are available (figma_*, github_*), prefer them for richer integrations.`,
-  model: 'google/gemini-2.5-flash',
+  model: 'google/gemini-flash-latest',
   tools: {
     fetchFigmaDesignTool,
     createGithubPrTool,

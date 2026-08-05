@@ -15,6 +15,6 @@ Rules:
 - Use Vite-friendly paths like src/App.tsx and src/index.css.
 - Do not invent backend APIs; keep the UI self-contained.
 - When MCP Figma tools are available, prefer them for richer design context.`,
-  model: 'google/gemini-2.5-flash',
+  model: 'google/gemini-flash-latest',
   tools: { fetchFigmaDesignTool },
 });

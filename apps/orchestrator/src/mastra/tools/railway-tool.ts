@@ -50,7 +50,9 @@ export const deployRailwayTool = createTool({
     const res = await fetch('https://backboard.railway.app/graphql/v2', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        // Project tokens (created under Project Settings → Tokens, scoped to one
+        // environment) authenticate via this header instead of `Authorization: Bearer`.
+        'Project-Access-Token': token,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

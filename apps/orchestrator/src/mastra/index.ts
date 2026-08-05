@@ -45,9 +45,10 @@ Rules:
 - Prefer a single composition for the first viewport (not a dashboard).
 - Brand/product name must be hero-level, not only nav text.
 - No cards in the hero. Keep one headline, one supporting sentence, one CTA group.
-- Output structured files with path + content for Vite (src/App.tsx, src/index.css).
+- This is a monorepo; ALWAYS prefix file paths with "apps/demo-app/"
+  (e.g. apps/demo-app/src/App.tsx, apps/demo-app/src/index.css). Never use bare "src/...".
 - When MCP Figma tools are available, use them for richer design context.`,
-  model: 'anthropic/claude-sonnet-4-5',
+  model: 'google/gemini-flash-latest',
   tools: {
     fetchFigmaDesignTool,
     ...mcpTools,
@@ -78,7 +79,7 @@ When a user asks to ship a design (or uses /ship-design):
 5. When MCP tools are present (figma_*, github_*, linear_*), prefer them for richer context.
 
 Command: /ship-design <figma-url> [owner/repo] [--live]`,
-  model: 'anthropic/claude-sonnet-4-5',
+  model: 'google/gemini-flash-latest',
   tools: controlTools as never,
   ...(slackChannels ? { channels: slackChannels } : {}),
 });
@@ -91,7 +92,7 @@ const pipelineControlAgent = new Agent({
 Prefer designToDeployWorkflow for the full path.
 Use MCP tools when available; otherwise use the REST tools.
 Prefer dry-run unless the user asks for live.`,
-  model: 'anthropic/claude-sonnet-4-5',
+  model: 'google/gemini-flash-latest',
   tools: controlTools as never,
 });
 

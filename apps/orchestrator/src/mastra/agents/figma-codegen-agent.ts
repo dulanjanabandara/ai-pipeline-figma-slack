@@ -12,7 +12,10 @@ Rules:
 - Avoid purple-on-white clichés, cream+terracotta defaults, and broadsheet newspaper layouts.
 - No cards in the hero. Keep one headline, one supporting sentence, one CTA group.
 - Output ONLY valid structured data matching the schema: an array of files with path + content.
-- Use Vite-friendly paths like src/App.tsx and src/index.css.
+- This is a monorepo; the target Vite app lives at apps/demo-app. ALWAYS prefix every
+  file path with "apps/demo-app/", e.g. apps/demo-app/src/App.tsx,
+  apps/demo-app/src/components/Hero.tsx, apps/demo-app/src/index.css.
+  Never write bare "src/..." paths — those land outside the app and are never built or deployed.
 - Do not invent backend APIs; keep the UI self-contained.
 - When MCP Figma tools are available, prefer them for richer design context.`,
   model: 'google/gemini-flash-latest',

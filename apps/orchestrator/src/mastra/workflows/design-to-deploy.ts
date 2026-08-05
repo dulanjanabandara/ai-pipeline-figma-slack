@@ -95,7 +95,7 @@ function slugify(value: string): string {
 function fallbackGeneratedFiles(designName: string) {
   return [
     {
-      path: 'src/App.tsx',
+      path: 'apps/demo-app/src/App.tsx',
       language: 'tsx' as const,
       content: `export default function App() {
   return (
@@ -128,7 +128,7 @@ function fallbackGeneratedFiles(designName: string) {
 `,
     },
     {
-      path: 'src/index.css',
+      path: 'apps/demo-app/src/index.css',
       language: 'css' as const,
       content: `@import "tailwindcss";
 
@@ -245,7 +245,9 @@ Frame hints: ${inputData.figma.frameHints.join(', ')}
 File key: ${inputData.figma.fileKey}
 Node: ${inputData.figma.nodeId ?? 'root'}
 
-Return files suitable for the demo-app Vite project.`,
+Return files for the apps/demo-app Vite project. Every path MUST start with
+"apps/demo-app/" (e.g. apps/demo-app/src/App.tsx) — this is a monorepo and that
+prefix is required for the files to land in the right workspace.`,
       {
         structuredOutput: { schema },
       },
